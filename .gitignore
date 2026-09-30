@@ -1,0 +1,18 @@
+# Arquivos de place do Roblox (binários grandes; o código vive em src/)
+*.rbxl
+*.rbxlx
+*.rbxl.lock
+*.rbxlx.lock
+
+# Rojo / ferramentas
+sourcemap.json
+/Packages
+/ServerPackages
+/DevPackages
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/extensions.json
