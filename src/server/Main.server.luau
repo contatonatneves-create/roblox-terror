@@ -16,7 +16,7 @@ local function event(name)
 	return r
 end
 local R = {}
-for _, name in ipairs({ "Transicao", "FimTransmissao", "Falar", "Aviso", "Som", "Movimento", "SoltarCarrinho", "SairEsconderijo" }) do
+for _, name in ipairs({ "Transicao", "FimTransmissao", "Falar", "Aviso", "Som", "Movimento", "SoltarCarrinho", "SairEsconderijo", "Dizer", "CobrirOlhos", "Encarou" }) do
 	R[name] = event(name)
 end
 
@@ -73,6 +73,21 @@ if game:GetService("RunService"):IsStudio() then
 			return "ok"
 		elseif cmd == "Tarefas" then
 			Tape.DebugCompleteTasks()
+			return "ok"
+		elseif cmd == "Hospede" then
+			Tape.DebugGuest()
+			return "ok"
+		elseif cmd == "Instrutor" then
+			Tape.DebugTrainer()
+			return "ok"
+		elseif cmd == "Colega" then
+			Tape.DebugColleague()
+			return "ok"
+		elseif cmd == "Travar" then
+			Tape.DebugJam()
+			return "ok"
+		elseif cmd == "Itens" then
+			Tape.DebugItems()
 			return "ok"
 		elseif cmd == "Toalhas" then
 			for _, p in ipairs(Players:GetPlayers()) do

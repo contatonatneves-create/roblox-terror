@@ -232,6 +232,10 @@ local function threatLevel()
 	end
 	if a == "CamareiraAviso" then
 		return 0.35 + near * 0.3
+	elseif a == "Hospede" then
+		return 0.08 + near * 0.25
+	elseif a == "Instrutor" then
+		return 0.18 + near * 0.4
 	end
 	return 0.3 + near * 0.6
 end

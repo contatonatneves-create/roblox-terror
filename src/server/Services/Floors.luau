@@ -350,6 +350,10 @@ function Floors.TaskText(floor)
 		elseif t.Kind == "Limpeza" then
 			local left = Config.Tasks.CleanStrokes - (t.Strokes or 0)
 			table.insert(lines, mark .. "LIMPAR A MANCHA NO CARPETE" .. (t.Done and "" or (" (" .. left .. ")")))
+		elseif t.Kind == "Conserto" then
+			table.insert(lines, mark .. "CONSERTAR O FIO EXPOSTO (FITA ISOLANTE)")
+		elseif t.Kind == "Servir" then
+			table.insert(lines, mark .. "SERVIR O QUARTO " .. t.Number .. " (BANDEJA NA MARCA)")
 		end
 	end
 	if floor.AllDone then
@@ -365,6 +369,8 @@ function Floors.TaskSpeech(floor)
 			table.insert(parts, "Entregue toalhas no quarto " .. t.Number .. ".")
 		elseif t.Kind == "Limpeza" then
 			table.insert(parts, "Limpe a mancha no carpete.")
+		elseif t.Kind == "Conserto" then
+			table.insert(parts, "Conserte o fio exposto.")
 		end
 	end
 	return table.concat(parts, " ")
@@ -392,6 +398,26 @@ local function setupDelivery(floor, t, rng)
 	end)
 end
 
+-- Tarefas criadas por eventos (ex.: o Hóspede pedindo serviço de quarto)
+function Floors.AddTask(floor, kind, data)
+	local t = newTask(floor, kind, data)
+	floor.AllDone = false
+	fire("TaskDone", floor, nil)
+	return t
+end
+
+Floors.CompleteTask = completeTask
+
+-- Algum fio ainda vivo neste andar?
+function Floors.HasLiveWire(floor)
+	for _, t in ipairs(floor.Tasks) do
+		if t.Kind == "Conserto" and t.Live then
+			return true
+		end
+	end
+	return false
+end
+
 function Floors.OnSweep(player, pos)
 	for _, floor in pairs(floors) do
 		for _, t in ipairs(floor.Tasks) do
@@ -414,6 +440,61 @@ function Floors.OnSweep(player, pos)
 end
 
 Floors.Notify = function() end -- substituído pelo Tape
+Floors.Kill = function() end -- substituído pelo Tape
+Floors.IsActive = function()
+	return false
+end
+
+---------------------------------------------------------------- conserto: fio exposto e poça (seção 6.4)
+local R = Config.Repair
+
+local function buildRepair(floor, model, spot, rng)
+	local v = dirVec(spot.Side)
+	local inward = -v
+	local wallFace = spot.Center + v * (HALF - WALL)
+	local along = (v.X ~= 0) and Vector3.new(0, 0, 1) or Vector3.new(1, 0, 0)
+	local offset = along * rng:NextNumber(-2, 2)
+	local function size(len, height, thick)
+		if v.X ~= 0 then
+			return Vector3.new(thick, height, len)
+		end
+		return Vector3.new(len, height, thick)
+	end
+	local rep = Instance.new("Model")
+	rep.Name = "FioExposto"
+	-- caixa de força arrebentada e o fio pendurado
+	Build.Part("Caixa", size(1.4, 1.6, 0.5), CFrame.new(wallFace + offset + inward * 0.25 + Vector3.new(0, 6.6, 0)), Color3.fromRGB(120, 124, 118), M.Metal, rep)
+	Build.Deco("Tampa", size(1.2, 0.2, 0.1), CFrame.new(wallFace + offset + inward * 0.55 + Vector3.new(0, 5.9, 0)) * CFrame.Angles(0.5, 0, 0.3), Color3.fromRGB(96, 100, 94), M.Metal, rep)
+	local top = wallFace + offset + inward * 0.6 + Vector3.new(0, 6, 0)
+	local tip = wallFace + offset + inward * 1.1 + Vector3.new(0, 1.6, 0)
+	local mid = (top + tip) / 2
+	local wire = Build.Part("Fio", Vector3.new(0.2, (top - tip).Magnitude, 0.2), CFrame.lookAt(mid, tip) * CFrame.Angles(math.rad(90), 0, 0), Color3.fromRGB(20, 20, 20), M.Rubber, rep, { collide = false })
+	local tipPart = Build.Deco("Ponta", Vector3.new(0.3, 0.3, 0.3), CFrame.new(tip), Color3.fromRGB(190, 120, 60), M.Metal, rep)
+	local sparks = Instance.new("ParticleEmitter")
+	sparks.Name = "Faiscas"
+	sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	sparks.Color = ColorSequence.new(Color3.fromRGB(255, 240, 170), Color3.fromRGB(255, 150, 40))
+	sparks.LightEmission = 1
+	sparks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25), NumberSequenceKeypoint.new(1, 0) })
+	sparks.Lifetime = NumberRange.new(0.15, 0.45)
+	sparks.Speed = NumberRange.new(5, 12)
+	sparks.SpreadAngle = Vector2.new(70, 70)
+	sparks.Acceleration = Vector3.new(0, -35, 0)
+	sparks.Rate = 22
+	sparks.Parent = tipPart
+	local glow = Build.Light(tipPart, "PointLight", Color3.fromRGB(255, 190, 110), 9, 1.2)
+	glow.Name = "Brilho"
+	tipPart:SetAttribute("Pisca", true)
+	local buzz = Build.Sound(tipPart, Config.Sounds.Static, { name = "Zumbido", volume = 0.25, looped = true, maxDistance = 35, speed = 1.6, play = true })
+	-- poça de água encostada na parede
+	local puddleCenter = wallFace + offset + inward * R.PuddleFromWall
+	local puddle = Build.Part("Poca", Vector3.new(0.06, R.PuddleRadius * 2, R.PuddleRadius * 2), CFrame.new(puddleCenter + Vector3.new(0, 0.04, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(34, 52, 60), M.Glass, rep, { collide = false, shape = Enum.PartType.Cylinder })
+	puddle.Transparency = 0.3
+	puddle.Reflectance = 0.25
+	puddle:SetAttribute("Agua", true)
+	rep.Parent = model
+	return { Model = rep, Wire = wire, Tip = tipPart, Sparks = sparks, Glow = glow, Buzz = buzz, Puddle = puddle, PuddleCenter = puddleCenter }
+end
 
 ---------------------------------------------------------------- construção do andar
 function Floors.Build(n, seed)
@@ -429,6 +510,7 @@ function Floors.Build(n, seed)
 	local phase = Config.PhaseOf(n)
 	local dirty = phase.Name ~= "INTEGRACAO"
 	local doorCount = 0
+	local freeWalls = {}
 
 	for i, c in ipairs(cells) do
 		local center = origin + Vector3.new(c.X * CELL, 0, c.Z * CELL)
@@ -457,8 +539,11 @@ function Floors.Build(n, seed)
 					if c.Kind == "Reto" and rng:NextNumber() < G.DoorChance then
 						doorCount += 1
 						buildDoor(floor, cellModel, center, s, n * 100 + doorCount, rng)
-					elseif rng:NextNumber() < G.PropChance then
-						buildProp(floor, cellModel, center, s, rng)
+					else
+						table.insert(freeWalls, { Center = center, Side = s, Index = i, Model = cellModel })
+						if rng:NextNumber() < G.PropChance then
+							buildProp(floor, cellModel, center, s, rng)
+						end
 					end
 				end
 			end
@@ -484,6 +569,34 @@ function Floors.Build(n, seed)
 		local stain = Build.Deco("Mancha", Vector3.new(0.06, 3.4, 4.2), CFrame.new(c.Center + Vector3.new(rng:NextNumber(-2, 2), 0.04, rng:NextNumber(-2, 2))) * CFrame.Angles(0, rng:NextNumber(0, 6), math.rad(90)), C.Stain, M.SmoothPlastic, model, { shape = Enum.PartType.Cylinder })
 		stain.Size = Vector3.new(0.06, 3.4, 3.4)
 		newTask(floor, "Limpeza", { Stain = stain })
+	end
+	if n >= R.FromFloor and #freeWalls > 0 and rng:NextNumber() < R.Chance then
+		local lo = math.max(1, math.floor(#freeWalls * 0.25))
+		local spot = freeWalls[rng:NextInteger(lo, #freeWalls)]
+		local parts = buildRepair(floor, spot.Model, spot, rng)
+		local t = newTask(floor, "Conserto", parts)
+		t.Live = true
+		local pp = Build.Prompt(parts.Wire, "PromptConserto", "Consertar fio", "Fio exposto", { distance = 9, hold = R.Hold })
+		pp.Triggered:Connect(function(player)
+			if t.Done or not Floors.IsActive(player) then
+				return
+			end
+			local character = player.Character
+			local tape = character and (character:FindFirstChild("FitaIsolante") or player.Backpack:FindFirstChild("FitaIsolante"))
+			if not tape then
+				Floors.Notify(player, "Pegue fita isolante no carrinho.")
+				return
+			end
+			tape:Destroy()
+			pp.Enabled = false
+			t.Live = false
+			parts.Sparks.Enabled = false
+			parts.Glow.Enabled = false
+			parts.Buzz:Stop()
+			parts.Tip:SetAttribute("Pisca", nil)
+			Build.Deco("Fita", Vector3.new(0.34, 0.6, 0.34), CFrame.new(parts.Tip.Position + Vector3.new(0, 0.2, 0)), Color3.fromRGB(28, 28, 30), M.Plastic, parts.Model)
+			completeTask(floor, t)
+		end)
 	end
 
 	model.Parent = folder
@@ -524,12 +637,40 @@ function Floors.FloorAt(pos)
 	return nil
 end
 
+local function shockCheck()
+	for _, floor in pairs(floors) do
+		for _, t in ipairs(floor.Tasks) do
+			if t.Kind == "Conserto" and t.Live then
+				for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+					local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+					if root and Floors.IsActive(player) then
+						local d = Vector3.new(root.Position.X - t.PuddleCenter.X, 0, root.Position.Z - t.PuddleCenter.Z).Magnitude
+						if d <= R.PuddleRadius - 0.4 and math.abs(root.Position.Y - t.PuddleCenter.Y) < 6 then
+							t.Sparks:Emit(40)
+							Floors.Kill(player, "Eletrocutado. Você pisou na água perto do fio.")
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
 function Floors.Init()
 	folder = workspace:FindFirstChild("Andares") or Instance.new("Folder")
 	folder.Name = "Andares"
 	-- o place pode ter andares de prévia montados no modo Edit; no jogo eles são gerados de novo
 	folder:ClearAllChildren()
 	folder.Parent = workspace
+	task.spawn(function()
+		while true do
+			task.wait(0.2)
+			local ok, err = pcall(shockCheck)
+			if not ok then
+				warn("[Floors] " .. tostring(err))
+			end
+		end
+	end)
 end
 
 return Floors

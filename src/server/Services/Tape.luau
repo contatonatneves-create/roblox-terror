@@ -7,6 +7,11 @@ local Floors = require(script.Parent.Floors)
 local Trolley = require(script.Parent.Trolley)
 local Lobby = require(script.Parent.Lobby)
 local Maid = require(script.Parent.Maid)
+local Threat = require(script.Parent.Threat)
+local Guest = require(script.Parent.Guest)
+local Trainer = require(script.Parent.Trainer)
+local Colleague = require(script.Parent.Colleague)
+local Polaroid = require(script.Parent.Polaroid)
 
 local Tape = {}
 local remotes = nil
@@ -56,11 +61,40 @@ local function fireRun(name, ...)
 end
 
 ---------------------------------------------------------------- textos dos andares
-local function ruleFor(n)
-	if n >= (Config.Maid.DebugFromFloor or Config.Maid.FromFloor) then
-		return Config.Rules.Maid
+-- Regras que valem neste andar, da mais antiga para a mais nova (a TV mostra as 2 mais novas)
+local function rulesFor(floor)
+	local n = floor.Number
+	local rules, speech = {}, nil
+	local function add(key)
+		table.insert(rules, Config.Rules[key])
+		speech = Config.Speech[key] or speech
 	end
-	return Config.Rules.Default
+	if n >= Config.Guest.FromFloor and n <= Config.Guest.ToFloor then
+		add("Guest")
+	end
+	if n >= (Config.Maid.DebugFromFloor or Config.Maid.FromFloor) then
+		add("Maid")
+	end
+	for _, t in ipairs(floor.Tasks) do
+		if t.Kind == "Conserto" then
+			add("Repair")
+			break
+		end
+	end
+	if n >= Config.Colleague.FromFloor then
+		add("Colleague")
+	end
+	if n >= Config.Trainer.FromFloor then
+		add("Trainer")
+	end
+	if #rules == 0 then
+		add("Default")
+	end
+	local shown = {}
+	for i = math.max(1, #rules - 1), #rules do
+		table.insert(shown, rules[i])
+	end
+	return shown, speech
 end
 
 local function updateTexts(floor)
@@ -70,7 +104,8 @@ local function updateTexts(floor)
 	local phase = Config.PhaseOf(floor.Number)
 	local tasks = Floors.TaskText(floor)
 	local header = string.format("ANDAR %02d  -  %s\n", floor.Number, phase.Name)
-	local tv = header .. "\n" .. tasks .. "\n\nREGRA: " .. ruleFor(floor.Number)
+	local rules = rulesFor(floor)
+	local tv = header .. "\n" .. tasks .. "\n\nREGRA: " .. table.concat(rules, "\nREGRA: ")
 	Floors.SetTV(floor.Start, tv)
 	Floors.SetTV(floor.End, tv)
 	if run and run.Floor == floor.Number then
@@ -93,8 +128,9 @@ local function arriveFloor(n)
 	updateTexts(floor)
 	-- voz robótica na TV do elevador
 	local speech = Floors.TaskSpeech(floor)
-	if ruleFor(n) == Config.Rules.Maid then
-		speech ..= " Se as luzes ficarem âmbar: pare, limpe e não faça barulho."
+	local _, ruleSpeech = rulesFor(floor)
+	if ruleSpeech then
+		speech ..= " " .. ruleSpeech
 	end
 	fireRun("Falar", speech)
 	task.delay(Config.Run.ArrivalDoorDelay, function()
@@ -104,6 +140,25 @@ local function arriveFloor(n)
 		end
 	end)
 	Maid.Schedule(floor, isCurrent, activePlayers, run.Rng)
+	Guest.Schedule(floor, run.Rng)
+	Colleague.Schedule(floor, run.Rng)
+	Trainer.Schedule(floor, run.Rng)
+	-- rodas que travam (Degradação em diante)
+	if n >= Config.Jam.FromFloor then
+		task.spawn(function()
+			local rng = run.Rng
+			while isCurrent(floor) or (run and run.Floor == n) do
+				task.wait(rng:NextNumber(Config.Jam.Every[1], Config.Jam.Every[2]))
+				if not isCurrent(floor) then
+					return
+				end
+				local cart = Trolley.Get()
+				if cart and next(cart.Pushers) and rng:NextNumber() < Config.Jam.Chance then
+					Trolley.Jam(Config.Jam.Seconds)
+				end
+			end
+		end)
+	end
 	-- carrega o próximo e descarta o antigo
 	task.spawn(function()
 		if n < Config.Run.Floors and not Floors.Get(n + 1) then
@@ -123,7 +178,7 @@ local function endRun(success)
 		return
 	end
 	local list = runPlayers()
-	Maid.Cancel()
+	Threat.CancelAll()
 	for _, p in ipairs(list) do
 		Trolley.PlayerGone(p)
 		local wasAlive = State.IsActive(p)
@@ -166,6 +221,7 @@ function Tape.Kill(player, reason)
 		return
 	end
 	State.SetAlive(player, false)
+	player:SetAttribute("DizerAte", nil)
 	Trolley.PlayerGone(player)
 	State.ClearTools(player)
 	remotes.FimTransmissao:FireClient(player, reason or "Sinal perdido.")
@@ -195,7 +251,7 @@ end
 
 local function checkOut()
 	run.Busy = true
-	Maid.Cancel()
+	Threat.CancelAll()
 	local floor = Floors.Get(run.Floor)
 	Floors.SetDoors(floor.End, false)
 	local elapsed = os.clock() - run.StartClock
@@ -206,7 +262,7 @@ end
 
 local function ride()
 	run.Busy = true
-	Maid.Cancel()
+	Threat.CancelAll()
 	local n = run.Floor
 	local floor = Floors.Get(n)
 	Floors.SetDoors(floor.End, false)
@@ -280,6 +336,7 @@ function Tape.Start(list, startFloor)
 	workspace:SetAttribute("AndarTotal", Config.Run.Floors)
 	workspace:SetAttribute("FitaInicio", workspace:GetServerTimeNow())
 	Floors.DestroyAll()
+	Polaroid.Reset()
 	local first = Floors.Build(startFloor, seed + startFloor)
 	Trolley.Spawn(first.Start.Frame * CFrame.new(0, 0, 1.2))
 	for _, p in ipairs(list) do
@@ -357,7 +414,7 @@ function Tape.DebugJump(n)
 		return
 	end
 	run.Busy = true
-	Maid.Cancel()
+	Threat.CancelAll()
 	local old = Floors.Get(run.Floor)
 	local target = Floors.Build(n, run.Seed + n)
 	teleportGroup(target.Start.Frame * old.Start.Frame:Inverse())
@@ -372,16 +429,52 @@ function Tape.DebugMaid()
 	end
 end
 
+function Tape.DebugGuest()
+	if run then
+		task.spawn(Guest.Trigger, Floors.Get(run.Floor))
+	end
+end
+
+function Tape.DebugTrainer()
+	if run then
+		task.spawn(Trainer.Trigger, Floors.Get(run.Floor))
+	end
+end
+
+function Tape.DebugColleague()
+	if run then
+		task.spawn(Colleague.Trigger, Floors.Get(run.Floor))
+	end
+end
+
+function Tape.DebugJam()
+	Trolley.Jam(Config.Jam.Seconds)
+end
+
+function Tape.DebugItems()
+	for _, p in ipairs(activePlayers()) do
+		State.GiveTray(p)
+		State.GiveDuctTape(p)
+	end
+end
+
 function Tape.DebugCompleteTasks()
 	if run then
 		local floor = Floors.Get(run.Floor)
+		Threat.CancelAll()
 		for _, t in ipairs(floor.Tasks) do
-			if t.Kind == "Limpeza" and t.Stain then
-				t.Strokes = Config.Tasks.CleanStrokes - 1
-				Floors.OnSweep(Players:GetPlayers()[1], t.Stain.Position)
-			elseif t.Kind == "Entrega" and not t.Done then
-				t.Done = true
+			if t.Kind == "Limpeza" and t.Stain and t.Stain.Parent then
+				t.Stain:Destroy()
 			end
+			if t.Kind == "Conserto" then
+				t.Live = false
+				if t.Sparks then
+					t.Sparks.Enabled = false
+					t.Glow.Enabled = false
+					t.Buzz:Stop()
+				end
+			end
+			t.Done = true
 		end
 		floor.AllDone = true
 		Floors.SetDoors(floor.End, true)
@@ -397,6 +490,21 @@ function Tape.Init(r)
 	workspace:SetAttribute("Ameaca", "")
 	Lobby.OnInsert(onInsert)
 	Floors.Notify = State.Notify
+	Floors.Kill = Tape.Kill
+	Floors.IsActive = State.IsActive
+	Threat.SetContext({
+		Kill = Tape.Kill,
+		Active = activePlayers,
+		IsCurrent = isCurrent,
+		Notify = State.Notify,
+		FireRun = fireRun,
+		Rng = function()
+			return run and run.Rng or Random.new()
+		end,
+	})
+	Guest.Init(r)
+	Trainer.Init(r)
+	Colleague.Init()
 	Floors.On("TaskDone", function(floor)
 		updateTexts(floor)
 	end)

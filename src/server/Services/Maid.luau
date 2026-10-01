@@ -8,6 +8,7 @@ local Build = require(script.Parent.Build)
 local State = require(script.Parent.State)
 local Noise = require(script.Parent.Noise)
 local Floors = require(script.Parent.Floors)
+local Threat = require(script.Parent.Threat)
 
 local Maid = {}
 local MC = Config.Maid
@@ -87,8 +88,11 @@ function Maid.Cancel()
 		active.Model:Destroy()
 	end
 	if active then
-		workspace:SetAttribute("Ameaca", "")
-		active.Floor.Model:SetAttribute("Luzes", "Normal")
+		Threat.Release("CamareiraAviso")
+		Threat.Release("Camareira")
+		if active.Floor.Model.Parent then
+			active.Floor.Model:SetAttribute("Luzes", "Normal")
+		end
 	end
 	active = nil
 end
@@ -99,15 +103,13 @@ end
 
 -- Dispara a Camareira no andar agora
 function Maid.Trigger(floor, playersOnFloor)
-	if active then
+	if active or not Threat.Acquire("CamareiraAviso", floor.Path[1]) then
 		return
 	end
 	token += 1
 	local myToken = token
 	active = { Floor = floor }
 	-- aviso
-	workspace:SetAttribute("Ameaca", "CamareiraAviso")
-	workspace:SetAttribute("AmeacaPos", floor.Path[1])
 	floor.Model:SetAttribute("Luzes", "Ambar")
 	local warnPart = Build.Deco("RangidoAviso", Vector3.new(1, 1, 1), CFrame.new(floor.Path[1] + Vector3.new(0, 4, 0)), Color3.new(), M.SmoothPlastic, floor.Model, { transp = 1 })
 	local squeak = Build.Sound(warnPart, Config.Sounds.TrolleySqueak, { volume = 0.2, looped = true, maxDistance = 400, minDistance = 40, speed = 1.35, play = true })
@@ -125,7 +127,7 @@ function Maid.Trigger(floor, playersOnFloor)
 		return
 	end
 	-- passagem
-	workspace:SetAttribute("Ameaca", "Camareira")
+	Threat.Rename("CamareiraAviso", "Camareira")
 	local path = floor.Path
 	local first = path[1]
 	local model = buildModel(CFrame.lookAt(first, first + (path[2] - first).Unit))
@@ -187,10 +189,16 @@ function Maid.Schedule(floor, isCurrent, playersOnFloor, rng)
 	end
 	local delay = rng:NextNumber(MC.FirstDelay[1], MC.FirstDelay[2])
 	task.delay(delay, function()
-		if isCurrent(floor) and not active then
+		Threat.WhenFree(function()
+			return isCurrent(floor) and not active
+		end, function()
 			Maid.Trigger(floor, playersOnFloor)
-		end
+		end)
 	end)
 end
+
+Threat.Register("Camareira", function()
+	Maid.Cancel()
+end)
 
 return Maid

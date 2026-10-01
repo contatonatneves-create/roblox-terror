@@ -8,6 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Build = require(script.Parent.Build)
 local State = require(script.Parent.State)
+local Noise = require(script.Parent.Noise)
+local Polaroid = require(script.Parent.Polaroid)
 
 local Trolley = {}
 local M = Enum.Material
@@ -76,12 +78,18 @@ local function makeModel(cf)
 	part("Frasco", Vector3.new(0.5, 0.8, 0.5), CFrame.new(0.4, 3.8, -1.4), Color3.fromRGB(200, 190, 60), M.SmoothPlastic, { collide = false })
 	part("Cabo", Vector3.new(0.18, 4, 0.18), CFrame.new(-1.45, 4.4, -1.8) * CFrame.Angles(math.rad(12), 0, 0), Color3.fromRGB(150, 110, 70), M.Wood, { collide = false })
 	part("Saco", Vector3.new(2.6, 2.2, 0.9), CFrame.new(0, 2.6, -2.9), Color3.fromRGB(196, 186, 160), M.Fabric, { collide = false })
+	-- itens do serviço: bandejas, fita isolante e a Polaroid
+	local tray = part("BandejaEstoque", Vector3.new(1.5, 0.12, 1.1), CFrame.new(-0.8, 3.47, -1.1), Color3.fromRGB(170, 172, 168), M.Metal, { collide = false })
+	part("Cloche", Vector3.new(0.8, 1, 1), CFrame.new(-0.8, 3.95, -1.1) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(200, 200, 196), M.Metal, { collide = false, shape = Enum.PartType.Cylinder })
+	local tape = part("FitaEstoque", Vector3.new(0.35, 0.8, 0.8), CFrame.new(1.1, 4.5, 0.2) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(28, 28, 30), M.Plastic, { collide = false, shape = Enum.PartType.Cylinder })
+	local camera = part("PolaroidEstoque", Vector3.new(1.1, 0.8, 0.7), CFrame.new(-0.9, 4.68, 1.7), Color3.fromRGB(232, 228, 214), M.SmoothPlastic, { collide = false })
+	part("PolaroidLente", Vector3.new(0.45, 0.45, 0.1), CFrame.new(-0.9, 4.68, 1.33), Color3.fromRGB(20, 20, 22), M.Glass, { collide = false })
 	m.PrimaryPart = body
 	weldAll(m, body)
 	body.Anchored = true
 	body.Massless = false
 	m:SetAttribute("Carrinho", true)
-	return m, body, towels
+	return m, body, towels, tray, tape, camera
 end
 
 ---------------------------------------------------------------- empurrar
@@ -111,8 +119,12 @@ end
 
 local function updateSpeeds()
 	local n = pusherCount()
+	local speed = n >= 2 and Config.Move.PushTwo or Config.Move.PushOne
+	if cart.JamUntil and os.clock() < cart.JamUntil then
+		speed = Config.Jam.Speed
+	end
 	for p in pairs(cart.Pushers) do
-		State.SetPushing(p, true, n >= 2 and Config.Move.PushTwo or Config.Move.PushOne)
+		State.SetPushing(p, true, speed)
 	end
 end
 
@@ -292,7 +304,7 @@ end
 ---------------------------------------------------------------- API
 function Trolley.Spawn(cf)
 	Trolley.Remove()
-	local model, body, towels = makeModel(cf)
+	local model, body, towels, tray, tape, camera = makeModel(cf)
 	cart = { Model = model, Body = body, Pushers = {}, Hidden = nil, Last = body.CFrame }
 	-- prompts
 	local barra = model:FindFirstChild("Barra")
@@ -308,6 +320,27 @@ function Trolley.Spawn(cf)
 			State.GiveTowels(player)
 		end
 	end)
+	local trayPrompt = Build.Prompt(tray, "PromptBandeja", "Pegar bandeja", "Serviço de quarto", { distance = 7, key = Enum.KeyCode.B, pad = Enum.KeyCode.DPadDown })
+	trayPrompt.Triggered:Connect(function(player)
+		if State.CanAct(player) then
+			State.GiveTray(player)
+		end
+	end)
+	local tapePrompt = Build.Prompt(tape, "PromptFita", "Pegar fita isolante", "Manutenção", { distance = 7, key = Enum.KeyCode.X, pad = Enum.KeyCode.DPadRight })
+	tapePrompt.Triggered:Connect(function(player)
+		if State.CanAct(player) then
+			State.GiveDuctTape(player)
+		end
+	end)
+	local cameraPrompt = Build.Prompt(camera, "PromptPolaroid", "Pegar Polaroid", "Câmera", { distance = 7, key = Enum.KeyCode.P, pad = Enum.KeyCode.DPadLeft })
+	cameraPrompt.Triggered:Connect(Polaroid.Take)
+	cart.CameraPrompt = cameraPrompt
+	cart.CameraPart = camera
+	if not Polaroid.Available() then
+		cameraPrompt.Enabled = false
+		camera.Transparency = 1
+		model.PolaroidLente.Transparency = 1
+	end
 	-- rangido das rodas (o cliente controla o volume pela velocidade)
 	Build.Sound(body, Config.Sounds.TrolleySqueak, { name = "Rangido", volume = 0, looped = true, maxDistance = 70, play = true })
 	model.Parent = workspace
@@ -323,6 +356,32 @@ function Trolley.Remove()
 		cart.Model:Destroy()
 		cart = nil
 	end
+end
+
+-- Uma roda trava (Degradação): o carrinho fica lento e range alto por alguns segundos
+function Trolley.Jam(seconds)
+	if not cart then
+		return
+	end
+	local myCart = cart
+	cart.JamUntil = os.clock() + seconds
+	cart.Model:SetAttribute("Travado", true)
+	updateSpeeds()
+	local s = Build.Sound(cart.Body, Config.Sounds.TrolleySqueak, { volume = 1.6, speed = 0.55, maxDistance = 90 })
+	s:Play()
+	game:GetService("Debris"):AddItem(s, 6)
+	local pusher = next(cart.Pushers)
+	Noise.Emit(cart.Body.Position, Config.Jam.Noise, pusher, "Roda")
+	for p in pairs(cart.Pushers) do
+		State.Notify(p, "Uma roda travou!")
+	end
+	task.delay(seconds, function()
+		if cart == myCart then
+			cart.JamUntil = nil
+			cart.Model:SetAttribute("Travado", nil)
+			updateSpeeds()
+		end
+	end)
 end
 
 function Trolley.Get()
@@ -370,6 +429,17 @@ function Trolley.PlayerGone(player)
 		Trolley.Unhide(player)
 	end
 end
+
+Polaroid.OnAvailability(function(available)
+	if cart and cart.CameraPrompt then
+		cart.CameraPrompt.Enabled = available
+		cart.CameraPart.Transparency = available and 0 or 1
+		local lens = cart.Model:FindFirstChild("PolaroidLente")
+		if lens then
+			lens.Transparency = available and 0 or 1
+		end
+	end
+end)
 
 function Trolley.Init(remotes)
 	remotes.SoltarCarrinho.OnServerEvent:Connect(function(player)

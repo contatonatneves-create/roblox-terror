@@ -93,6 +93,79 @@ Config.Maid = {
 	DebugFromFloor = nil, -- para testes: forçar a partir de um andar
 }
 
+-- Hóspede do 302 (seção 7.3)
+Config.Guest = {
+	FromFloor = 3,
+	ToFloor = 18,
+	Chance = 0.6,
+	Delay = { 8, 18 }, -- segundos depois da chegada ao andar
+	MarkDistance = 3.6, -- "1 metro" da porta, em studs
+	SayWindow = 6, -- segundos para virar de costas e dizer a frase
+	BackDot = -0.25, -- olhar (frente do corpo) x direção da porta: abaixo disso está "de costas"
+	SayRange = 14, -- distância máxima da porta para a frase valer
+	NoiseRadius = 14, -- barulho alto perto da porta = puxado
+	GiveUpRange = 30, -- se quem colocou a bandeja estiver mais longe que isso, o pedido só reinicia
+	Phrase = "Bom apetite, favor não incomodar.",
+}
+
+-- O Instrutor (seção 7.1)
+Config.Trainer = {
+	FromFloor = 13,
+	ToFloor = 20,
+	Chance = 0.8,
+	Delay = { 14, 28 },
+	AheadCells = 4, -- aparece algumas células à frente de quem está mais adiantado
+	Duration = { 14, 20 }, -- segundos parado no corredor
+	StareSeconds = 1.5, -- olhar direto por mais que isso = paralisia e morte
+	StareCone = 0.32, -- distância do centro da tela (0-0.5) que conta como "olhando"
+	Range = 70,
+	BackDot = -0.35, -- dar as costas (frente do corpo x direção dele) sem cobrir os olhos
+	FacedDot = 0.4, -- a partir daqui o jogador "encarou" a direção dele
+	Grace = 1.2, -- segundos depois de aparecer sem a regra das costas
+	BlindSeconds = 3, -- flash da Polaroid
+	MimicEvery = { 16, 32 }, -- imitação dos ruídos do grupo nos andares da Distorção
+	MimicDistance = { 30, 60 },
+}
+
+-- O Falso Colega (seção 7.4)
+Config.Colleague = {
+	FromFloor = 9,
+	ToFloor = 20,
+	Chance = 0.5,
+	Delay = { 6, 16 },
+	Radius = 15, -- barulho alto a até 15 studs dele
+	Speed = 5,
+	EffectSeconds = 60, -- cegueira + passos pesados
+	LifeSeconds = 70,
+}
+
+-- Polaroid (seção 9.2)
+Config.Polaroid = {
+	Flashes = 3,
+	Noise = 70,
+	Range = 45,
+	Cooldown = 1.2,
+}
+
+-- Conserto: fio exposto (seção 6.4)
+Config.Repair = {
+	FromFloor = 6,
+	Chance = 0.55,
+	PuddleRadius = 3.5,
+	PuddleFromWall = 2,
+	Hold = 1.2,
+}
+
+-- Rodas que travam (Degradação)
+Config.Jam = {
+	FromFloor = 6,
+	Every = { 35, 70 },
+	Chance = 0.55,
+	Seconds = 5,
+	Speed = 3,
+	Noise = 40,
+}
+
 -- Morte e espectador
 Config.Death = {
 	BlueScreenSeconds = 4,
@@ -126,7 +199,19 @@ Config.Voice = {
 -- Textos das regras mostradas nas TVs
 Config.Rules = {
 	Default = "MANTENHA O CARRINHO COM VOCÊ. NÃO CORRA NOS CORREDORES.",
+	Guest = "SE UM QUARTO PEDIR SERVIÇO: BANDEJA NA MARCA, VIRE DE COSTAS E DIGA A FRASE [G].",
 	Maid = "SE AS LUZES FICAREM ÂMBAR: PARE. LIMPE. NÃO FAÇA BARULHO.",
+	Repair = "NÃO PISE NA ÁGUA PERTO DO FIO.",
+	Colleague = "SE HOUVER UM COLEGA A MAIS: NÃO SIGA. PASSE EM SILÊNCIO.",
+	Trainer = "NÃO OLHE PARA O INSTRUTOR. COBRIR OS OLHOS [V]. NÃO DÊ AS COSTAS.",
+}
+
+-- Falas da TV (curtas: limite de texto-para-fala da plataforma)
+Config.Speech = {
+	Guest = "Se um quarto pedir serviço, deixe a bandeja na marca, vire de costas e diga a frase.",
+	Maid = "Se as luzes ficarem âmbar: pare, limpe e não faça barulho.",
+	Colleague = "Se houver um colega a mais, não siga.",
+	Trainer = "Não olhe para o Instrutor. Cubra os olhos.",
 }
 
 function Config.PhaseOf(floor: number)
