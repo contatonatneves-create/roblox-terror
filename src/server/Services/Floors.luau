@@ -475,12 +475,13 @@ local function buildRepair(floor, model, spot, rng)
 	sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
 	sparks.Color = ColorSequence.new(Color3.fromRGB(255, 240, 170), Color3.fromRGB(255, 150, 40))
 	sparks.LightEmission = 1
-	sparks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25), NumberSequenceKeypoint.new(1, 0) })
+	sparks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0) })
+	sparks.Brightness = 3
 	sparks.Lifetime = NumberRange.new(0.15, 0.45)
 	sparks.Speed = NumberRange.new(5, 12)
 	sparks.SpreadAngle = Vector2.new(70, 70)
 	sparks.Acceleration = Vector3.new(0, -35, 0)
-	sparks.Rate = 22
+	sparks.Rate = 35
 	sparks.Parent = tipPart
 	local glow = Build.Light(tipPart, "PointLight", Color3.fromRGB(255, 190, 110), 9, 1.2)
 	glow.Name = "Brilho"
@@ -488,9 +489,9 @@ local function buildRepair(floor, model, spot, rng)
 	local buzz = Build.Sound(tipPart, Config.Sounds.Static, { name = "Zumbido", volume = 0.25, looped = true, maxDistance = 35, speed = 1.6, play = true })
 	-- poça de água encostada na parede
 	local puddleCenter = wallFace + offset + inward * R.PuddleFromWall
-	local puddle = Build.Part("Poca", Vector3.new(0.06, R.PuddleRadius * 2, R.PuddleRadius * 2), CFrame.new(puddleCenter + Vector3.new(0, 0.04, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(34, 52, 60), M.Glass, rep, { collide = false, shape = Enum.PartType.Cylinder })
-	puddle.Transparency = 0.3
-	puddle.Reflectance = 0.25
+	local puddle = Build.Part("Poca", Vector3.new(0.06, R.PuddleRadius * 2, R.PuddleRadius * 2), CFrame.new(puddleCenter + Vector3.new(0, 0.04, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(16, 24, 30), M.SmoothPlastic, rep, { collide = false, shape = Enum.PartType.Cylinder })
+	puddle.Transparency = 0.12
+	puddle.Reflectance = 0.45
 	puddle:SetAttribute("Agua", true)
 	rep.Parent = model
 	return { Model = rep, Wire = wire, Tip = tipPart, Sparks = sparks, Glow = glow, Buzz = buzz, Puddle = puddle, PuddleCenter = puddleCenter }

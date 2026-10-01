@@ -221,6 +221,7 @@ function Tape.Kill(player, reason)
 		return
 	end
 	State.SetAlive(player, false)
+	print(string.format("[Fita] %s saiu do ar: %s", player.Name, tostring(reason)))
 	player:SetAttribute("DizerAte", nil)
 	Trolley.PlayerGone(player)
 	State.ClearTools(player)

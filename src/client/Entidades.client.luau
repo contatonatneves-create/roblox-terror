@@ -53,12 +53,20 @@ sayBtn.Position = UDim2.new(0.5, 0, 1, -230)
 ---------------------------------------------------------------- cobrir os olhos
 local covered = false
 -- quase preto, só as bordas da visão
-local shade = new("Frame", { Name = "OlhosCobertos", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, ZIndex = 1 }, gui)
-local shadeH = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BorderSizePixel = 0, ZIndex = 1 }, shade)
-new("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(0.12, 0.04), NumberSequenceKeypoint.new(0.88, 0.04), NumberSequenceKeypoint.new(1, 0.55) }) }, shadeH)
-local shadeV = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BorderSizePixel = 0, ZIndex = 1 }, shade)
-new("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(0.15, 0.1), NumberSequenceKeypoint.new(0.85, 0.1), NumberSequenceKeypoint.new(1, 0.6) }) }, shadeV)
-new("TextLabel", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(0.5, 0, 0, 26), BackgroundTransparency = 1, Font = FONT, TextScaled = true, TextColor3 = Color3.fromRGB(70, 110, 80), Text = "OLHOS COBERTOS - ANDE DE COSTAS", ZIndex = 2 }, shade)
+-- fica abaixo do filtro VHS (o OSD da filmadora continua visível)
+local shadeGui = Instance.new("ScreenGui")
+shadeGui.Name = "OlhosCobertos"
+shadeGui.ResetOnSpawn = false
+shadeGui.IgnoreGuiInset = true
+shadeGui.DisplayOrder = 9
+shadeGui.Parent = player:WaitForChild("PlayerGui")
+local shade = new("Frame", { Name = "Mao", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, ZIndex = 1 }, shadeGui)
+-- as mãos tapam o centro; só sobram frestas nas bordas
+local shadeH = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(4, 3, 3), BorderSizePixel = 0, ZIndex = 1 }, shade)
+new("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.82), NumberSequenceKeypoint.new(0.2, 0.08), NumberSequenceKeypoint.new(0.8, 0.08), NumberSequenceKeypoint.new(1, 0.82) }) }, shadeH)
+local shadeV = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(4, 3, 3), BorderSizePixel = 0, ZIndex = 1 }, shade)
+new("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.85), NumberSequenceKeypoint.new(0.22, 0.15), NumberSequenceKeypoint.new(0.78, 0.15), NumberSequenceKeypoint.new(1, 0.85) }) }, shadeV)
+new("TextLabel", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(0.5, 0, 0, 22), BackgroundTransparency = 1, Font = FONT, TextScaled = true, TextColor3 = Color3.fromRGB(90, 130, 100), Text = "OLHOS COBERTOS - ANDE DE COSTAS", ZIndex = 2 }, shade)
 
 local function humanoid()
 	return player.Character and player.Character:FindFirstChildOfClass("Humanoid")
