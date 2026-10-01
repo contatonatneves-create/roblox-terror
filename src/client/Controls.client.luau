@@ -288,7 +288,7 @@ RunService.Heartbeat:Connect(function(dt)
 				fixture.Color = AMBER
 			else
 				info.Light.Color = info.LightColor
-				fixture.Color = info.Color
+				fixture.Color = mode == "Escuro" and info.Color:Lerp(Color3.new(0, 0, 0), 0.65) or info.Color
 			end
 			info.Light.Brightness = info.Base * level
 			fixture.Transparency = level < 0.3 and 0.6 or 0

@@ -139,6 +139,20 @@ local function arriveFloor(n)
 			Floors.SetDoors(floor.Start, true)
 		end
 	end)
+	-- carrega o próximo e descarta o antigo
+	task.spawn(function()
+		if n < Config.Run.Floors and not Floors.Get(n + 1) then
+			Floors.Build(n + 1, run.Seed + n + 1)
+		end
+		for k in pairs(Floors.All()) do
+			if k < n - 1 or k > n + 1 then
+				Floors.Destroy(k)
+			end
+		end
+	end)
+	if workspace:GetAttribute("TesteSemEventos") then
+		return -- modo de teste do Studio: nenhuma entidade aparece sozinha
+	end
 	Maid.Schedule(floor, isCurrent, activePlayers, run.Rng)
 	Guest.Schedule(floor, run.Rng)
 	Colleague.Schedule(floor, run.Rng)
@@ -159,17 +173,6 @@ local function arriveFloor(n)
 			end
 		end)
 	end
-	-- carrega o próximo e descarta o antigo
-	task.spawn(function()
-		if n < Config.Run.Floors and not Floors.Get(n + 1) then
-			Floors.Build(n + 1, run.Seed + n + 1)
-		end
-		for k in pairs(Floors.All()) do
-			if k < n - 1 or k > n + 1 then
-				Floors.Destroy(k)
-			end
-		end
-	end)
 end
 
 ---------------------------------------------------------------- fim da fita

@@ -74,6 +74,11 @@ if game:GetService("RunService"):IsStudio() then
 		elseif cmd == "Tarefas" then
 			Tape.DebugCompleteTasks()
 			return "ok"
+		elseif cmd == "Calmo" then
+			-- liga/desliga as entidades automáticas (para testar uma coisa de cada vez)
+			local on = a ~= false
+			workspace:SetAttribute("TesteSemEventos", on or nil)
+			return on and "entidades automáticas desligadas" or "entidades automáticas ligadas"
 		elseif cmd == "Hospede" then
 			Tape.DebugGuest()
 			return "ok"
