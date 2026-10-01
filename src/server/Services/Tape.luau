@@ -459,6 +459,9 @@ function Tape.DebugItems()
 	for _, p in ipairs(activePlayers()) do
 		State.GiveTray(p)
 		State.GiveDuctTape(p)
+		if Polaroid.Available() then
+			Polaroid.Take(p)
+		end
 	end
 end
 
