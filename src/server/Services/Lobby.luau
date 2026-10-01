@@ -90,8 +90,8 @@ local function build()
 	-- luzes fluorescentes no teto (o cliente faz piscar)
 	for _, x in ipairs({ -9, 0, 9 }) do
 		for _, z in ipairs({ -6, 5 }) do
-			local fixture = Build.Deco("Luminaria", Vector3.new(4.4, 0.2, 1.4), CFrame.new(x, HT - 0.12, z), Color3.fromRGB(236, 240, 220), M.Neon, model, { shadow = false })
-			Build.Light(fixture, "PointLight", Color3.fromRGB(226, 236, 210), 22, 0.75)
+			local fixture = Build.Deco("Luminaria", Vector3.new(4.4, 0.2, 1.4), CFrame.new(x, HT - 0.12, z), Color3.fromRGB(150, 156, 138), M.Neon, model, { shadow = false })
+			Build.Light(fixture, "PointLight", Color3.fromRGB(226, 236, 210), 20, 0.42)
 			fixture:SetAttribute("Pisca", x == 9 and z == 5)
 			CollectionService:AddTag(fixture, "LuzLobby")
 		end

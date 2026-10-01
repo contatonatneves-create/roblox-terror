@@ -281,7 +281,7 @@ function Tape.Start(list, startFloor)
 	workspace:SetAttribute("FitaInicio", workspace:GetServerTimeNow())
 	Floors.DestroyAll()
 	local first = Floors.Build(startFloor, seed + startFloor)
-	Trolley.Spawn(first.Start.Frame * CFrame.new(0, 1.4, 1.2))
+	Trolley.Spawn(first.Start.Frame * CFrame.new(0, 0, 1.2))
 	for _, p in ipairs(list) do
 		State.SetInRun(p, true)
 		State.ClearTools(p)

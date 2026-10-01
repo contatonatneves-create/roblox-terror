@@ -26,7 +26,7 @@ local function effect(class, name, props)
 end
 local cc = effect("ColorCorrectionEffect", "VHSCor", { Saturation = -0.35, Contrast = 0.18, Brightness = 0.02, TintColor = Color3.fromRGB(236, 242, 255) })
 local blur = effect("BlurEffect", "VHSDesfoque", { Size = 1.5 })
-effect("BloomEffect", "VHSBrilho", { Intensity = 0.7, Size = 26, Threshold = 1.15 })
+effect("BloomEffect", "VHSBrilho", { Intensity = 0.4, Size = 24, Threshold = 1.4 })
 
 ---------------------------------------------------------------- tela
 local gui = Instance.new("ScreenGui")

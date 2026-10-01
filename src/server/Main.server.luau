@@ -23,11 +23,11 @@ end
 -- Luz: tudo é interno, escuro e esverdeado
 Lighting.ClockTime = 0
 Lighting.Brightness = 0
-Lighting.Ambient = Color3.fromRGB(46, 46, 42)
+Lighting.Ambient = Color3.fromRGB(38, 38, 35)
 Lighting.OutdoorAmbient = Color3.fromRGB(20, 20, 20)
 Lighting.EnvironmentDiffuseScale = 0.15
 Lighting.EnvironmentSpecularScale = 0.2
-Lighting.ExposureCompensation = 0.2
+Lighting.ExposureCompensation = 0
 Lighting.GlobalShadows = true
 Lighting.FogColor = Color3.fromRGB(10, 10, 10)
 Lighting.FogEnd = 400
@@ -73,6 +73,17 @@ if game:GetService("RunService"):IsStudio() then
 			return "ok"
 		elseif cmd == "Tarefas" then
 			Tape.DebugCompleteTasks()
+			return "ok"
+		elseif cmd == "Toalhas" then
+			for _, p in ipairs(Players:GetPlayers()) do
+				State.GiveTowels(p)
+			end
+			return "ok"
+		elseif cmd == "Matar" then
+			local p = Players:GetPlayers()[a or 1]
+			if p then
+				Tape.Kill(p, "Teste")
+			end
 			return "ok"
 		elseif cmd == "Estado" then
 			local run = Tape.Run()

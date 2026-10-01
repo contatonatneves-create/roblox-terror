@@ -21,7 +21,7 @@ local HARD = {
 	[Enum.Material.Wood] = true,
 	[Enum.Material.WoodPlanks] = true,
 	[Enum.Material.Marble] = true,
-	[Enum.Material.Tile] = true,
+	[Enum.Material.CeramicTiles] = true,
 	[Enum.Material.Concrete] = true,
 	[Enum.Material.Slate] = true,
 }
