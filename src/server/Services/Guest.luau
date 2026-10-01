@@ -235,7 +235,7 @@ end
 
 function Guest.Pull(player, reason)
 	local ev = active
-	if not ev or ev.Pulling then
+	if not ev or ev.Pulling or not State.IsActive(player) then
 		return
 	end
 	ev.Pulling = true
