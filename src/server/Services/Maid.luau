@@ -7,6 +7,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Build = require(script.Parent.Build)
 local State = require(script.Parent.State)
 local Noise = require(script.Parent.Noise)
+local Floors = require(script.Parent.Floors)
 
 local Maid = {}
 local MC = Config.Maid
@@ -148,7 +149,9 @@ function Maid.Trigger(floor, playersOnFloor)
 			for _, player in ipairs(playersOnFloor()) do
 				if not judged[player] then
 					local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-					if root and distXZ(root.Position, pos) <= MC.KillRadius then
+					-- quem está dentro de um elevador não está no corredor dela
+					local inElevator = root and (Floors.IsInside(floor.Start, root.Position) or Floors.IsInside(floor.End, root.Position))
+					if root and not inElevator and distXZ(root.Position, pos) <= MC.KillRadius then
 						judged[player] = true
 						local safe, why = isSafe(player)
 						if not safe then

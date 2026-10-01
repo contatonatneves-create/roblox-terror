@@ -246,14 +246,14 @@ function Trolley.Unhide(player)
 		if weld then
 			weld:Destroy()
 		end
-		setHiddenLook(character, false)
 		if root then
-			character:PivotTo(freeSpot(character))
+			-- o cliente é dono da física do boneco: ele mesmo se move para este ponto (Controls)
+			local spot = freeSpot(character)
+			player:SetAttribute("SaidaEsconderijo", spot)
+			character:PivotTo(spot)
 			root.AssemblyLinearVelocity = Vector3.zero
-			pcall(function()
-				root:SetNetworkOwner(player)
-			end)
 		end
+		setHiddenLook(character, false)
 	end
 	State.SetHidden(player, false)
 	cart.HidePrompt.Enabled = true

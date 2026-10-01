@@ -109,8 +109,17 @@ player:GetAttributeChangedSignal("Empurrando"):Connect(refreshButtons)
 player:GetAttributeChangedSignal("Escondido"):Connect(refreshButtons)
 player:GetAttributeChangedSignal("Escondido"):Connect(function()
 	-- ao sair da portinhola, garante que o boneco levanta (o servidor só reposiciona)
-	local hum = not player:GetAttribute("Escondido") and player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-	if hum then
+	local character = player.Character
+	local hum = not player:GetAttribute("Escondido") and character and character:FindFirstChildOfClass("Humanoid")
+	local spot = player:GetAttribute("SaidaEsconderijo")
+	if hum and typeof(spot) == "CFrame" then
+		player:SetAttribute("SaidaEsconderijo", nil)
+		character:PivotTo(spot)
+		local root = character:FindFirstChild("HumanoidRootPart")
+		if root then
+			root.AssemblyLinearVelocity = Vector3.zero
+			root.AssemblyAngularVelocity = Vector3.zero
+		end
 		hum.PlatformStand = false
 		hum:ChangeState(Enum.HumanoidStateType.GettingUp)
 	end
@@ -244,11 +253,11 @@ for _, tag in ipairs({ "LuzAndar", "LuzLobby" }) do
 end
 
 local function floorModelOf(fixture)
-	local m = fixture:FindFirstAncestorOfClass("Model")
-	while m and not m.Name:match("^Andar%d+$") do
-		m = m.Parent and m.Parent:FindFirstAncestorOfClass("Model")
+	local m = fixture.Parent
+	while m and m ~= workspace and not (m:IsA("Model") and m.Name:match("^Andar%d+$")) do
+		m = m.Parent
 	end
-	return m
+	return m ~= workspace and m or nil
 end
 
 ---------------------------------------------------------------- loop
