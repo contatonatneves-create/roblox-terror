@@ -527,6 +527,8 @@ end
 function Floors.Init()
 	folder = workspace:FindFirstChild("Andares") or Instance.new("Folder")
 	folder.Name = "Andares"
+	-- o place pode ter andares de prévia montados no modo Edit; no jogo eles são gerados de novo
+	folder:ClearAllChildren()
 	folder.Parent = workspace
 end
 
