@@ -211,6 +211,29 @@ local function setHiddenLook(character, hidden)
 	end
 end
 
+-- Lugar livre ao lado do carrinho para quem sai da portinhola (evita sair dentro da parede do elevador)
+local function freeSpot(character)
+	local cf = flatCFrame()
+	local params = OverlapParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { character, cart.Model }
+	for _, offset in ipairs({ Vector3.new(0, 0, 4.2), Vector3.new(3.2, 0, 0), Vector3.new(-3.2, 0, 0), Vector3.new(0, 0, -4.2), Vector3.new(2.8, 0, 3.6), Vector3.new(-2.8, 0, 3.6) }) do
+		local spot = cf * CFrame.new(offset + Vector3.new(0, 1.6, 0))
+		local hits = workspace:GetPartBoundsInBox(spot, Vector3.new(2.2, 4.6, 2.2), params)
+		local blocked = false
+		for _, part in ipairs(hits) do
+			if part.CanCollide then
+				blocked = true
+				break
+			end
+		end
+		if not blocked then
+			return CFrame.new(spot.Position) * cf.Rotation
+		end
+	end
+	return cf * CFrame.new(0, 1.6, 4.2)
+end
+
 function Trolley.Unhide(player)
 	if not cart or cart.Hidden ~= player then
 		return
@@ -224,13 +247,12 @@ function Trolley.Unhide(player)
 			weld:Destroy()
 		end
 		setHiddenLook(character, false)
-		local hum = character:FindFirstChildOfClass("Humanoid")
-		if hum then
-			hum.PlatformStand = false
-		end
 		if root then
-			local cf = flatCFrame()
-			character:PivotTo(cf * CFrame.new(3.2, 3, 0))
+			character:PivotTo(freeSpot(character))
+			root.AssemblyLinearVelocity = Vector3.zero
+			pcall(function()
+				root:SetNetworkOwner(player)
+			end)
 		end
 	end
 	State.SetHidden(player, false)
@@ -257,7 +279,6 @@ local function hide(player)
 	cart.Hidden = player
 	cart.HidePrompt.Enabled = false
 	setHiddenLook(character, true)
-	hum.PlatformStand = true
 	character:PivotTo(cart.Body.CFrame * CFrame.new(0, 0.5, 0))
 	local w = Instance.new("WeldConstraint")
 	w.Name = "SoldaEsconderijo"

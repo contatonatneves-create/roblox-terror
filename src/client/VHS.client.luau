@@ -14,6 +14,16 @@ local GREEN = Color3.fromRGB(96, 255, 140)
 local OSD_FONT = Enum.Font.Arcade
 local TEXT_FONT = Enum.Font.Code
 
+-- string.upper não conhece acentos (UTF-8): "você" viraria "VOCê"
+local ACCENTS = { ["á"] = "Á", ["à"] = "À", ["â"] = "Â", ["ã"] = "Ã", ["é"] = "É", ["ê"] = "Ê", ["í"] = "Í", ["ó"] = "Ó", ["ô"] = "Ô", ["õ"] = "Õ", ["ú"] = "Ú", ["ü"] = "Ü", ["ç"] = "Ç" }
+local function upper(text)
+	text = string.upper(text)
+	for lower, up in pairs(ACCENTS) do
+		text = string.gsub(text, lower, up)
+	end
+	return text
+end
+
 ---------------------------------------------------------------- pós-processamento
 local function effect(class, name, props)
 	local e = Lighting:FindFirstChild(name) or Instance.new(class)
@@ -156,7 +166,7 @@ local function showToast(text, seconds)
 end
 toast.Holder.Visible = false
 remotes:WaitForChild("Aviso").OnClientEvent:Connect(function(text)
-	showToast(string.upper(text), 3.5)
+	showToast(upper(text), 3.5)
 end)
 
 -- legenda das falas da TV (Fita Legendada)
@@ -319,7 +329,7 @@ local function updateSpectate()
 	spectateIndex = ((spectateIndex - 1) % #mates) + 1
 	local m = mates[spectateIndex]
 	camera.CameraSubject = m.Humanoid
-	specName.Text = "ASSISTINDO: " .. string.upper(m.Player.DisplayName)
+	specName.Text = "ASSISTINDO: " .. upper(m.Player.DisplayName)
 end
 
 prevBtn.Activated:Connect(function()
@@ -334,7 +344,7 @@ leaveBtn.Activated:Connect(stopSpectate)
 
 remotes:WaitForChild("FimTransmissao").OnClientEvent:Connect(function(reason)
 	playSound(Config.Sounds.TvOff, 0.8)
-	showScreen(Color3.fromRGB(16, 30, 180), "■ STOP", "FIM DE TRANSMISSÃO", string.upper(reason or ""), Config.Death.BlueScreenSeconds)
+	showScreen(Color3.fromRGB(16, 30, 180), "■ STOP", "FIM DE TRANSMISSÃO", upper(reason or ""), Config.Death.BlueScreenSeconds)
 	screenTitle.TextColor3 = Color3.new(1, 1, 1)
 	task.delay(Config.Death.BlueScreenSeconds, function()
 		if workspace:GetAttribute("FitaEstado") == "Rodando" and #aliveMates() > 0 then
@@ -432,7 +442,7 @@ RunService.RenderStepped:Connect(function(dt)
 		timeText:Set(glitchDigits(Config.FormatTime(workspace:GetServerTimeNow() - started), glitch))
 		local n = workspace:GetAttribute("Andar") or 0
 		floorText:Set(string.format("ANDAR %02d/%02d", n, workspace:GetAttribute("AndarTotal") or Config.Run.Floors))
-		phaseText:Set(string.upper(workspace:GetAttribute("Fase") or ""))
+		phaseText:Set(upper(workspace:GetAttribute("Fase") or ""))
 		tasksText:Set(running and (workspace:GetAttribute("Tarefas") or "") or "")
 	else
 		playText:Set(state == "Contagem" and "REW ◀◀" or "STOP ■")

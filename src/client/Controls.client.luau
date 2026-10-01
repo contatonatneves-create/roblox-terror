@@ -107,6 +107,14 @@ local function refreshButtons()
 end
 player:GetAttributeChangedSignal("Empurrando"):Connect(refreshButtons)
 player:GetAttributeChangedSignal("Escondido"):Connect(refreshButtons)
+player:GetAttributeChangedSignal("Escondido"):Connect(function()
+	-- ao sair da portinhola, garante que o boneco levanta (o servidor só reposiciona)
+	local hum = not player:GetAttribute("Escondido") and player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.PlatformStand = false
+		hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+	end
+end)
 player:GetAttributeChangedSignal("Vivo"):Connect(refreshButtons)
 player:GetAttributeChangedSignal("NaFita"):Connect(refreshButtons)
 refreshButtons()

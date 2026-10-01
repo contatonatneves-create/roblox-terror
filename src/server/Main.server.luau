@@ -32,7 +32,7 @@ Lighting.GlobalShadows = true
 Lighting.FogColor = Color3.fromRGB(10, 10, 10)
 Lighting.FogEnd = 400
 for _, child in ipairs(Lighting:GetChildren()) do
-	if child:IsA("SunRaysEffect") or child:IsA("DepthOfFieldEffect") then
+	if child:IsA("SunRaysEffect") or child:IsA("DepthOfFieldEffect") or (child:IsA("PostEffect") and not child.Name:match("^VHS")) then
 		child.Enabled = false
 	elseif child:IsA("Atmosphere") then
 		child.Density = 0
