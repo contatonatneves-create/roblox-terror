@@ -154,7 +154,7 @@ local function buildMark(ev)
 		Guest.PlaceTray(player)
 	end)
 	-- armadilha: entregar em mãos
-	local hand = Build.Prompt(door.Part, "PromptEmMaos", "Entregar em mãos", "Quarto " .. door.Number, { distance = 6, hold = 0.4 })
+	local hand = Build.Prompt(door.Part, "PromptEmMaos", "Entregar em mãos", "Quarto " .. door.Number, { distance = 6, hold = 0.4, key = Enum.KeyCode.R, pad = Enum.KeyCode.ButtonY })
 	ev.HandPrompt = hand
 	hand.Triggered:Connect(function(player)
 		if active == ev and State.CanAct(player) and State.HasTool(player, "Bandeja") then
