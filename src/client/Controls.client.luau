@@ -275,11 +275,12 @@ RunService.Heartbeat:Connect(function(dt)
 	for fixture, info in pairs(lights) do
 		if fixture.Parent and info.Light then
 			local floor = fixture:GetAttribute("Andar") and floorModelOf(fixture)
-			local amber = floor and floor:GetAttribute("Luzes") == "Ambar"
-			local level = 1
+			local mode = floor and floor:GetAttribute("Luzes")
+			local amber = mode == "Ambar"
+			local level = mode == "Escuro" and 0.3 or 1
 			if fixture:GetAttribute("Pisca") then
 				local n = math.noise(t * 4, info.Seed)
-				level = n > 0.25 and 0.1 or 1
+				level = n > 0.25 and 0.1 or level
 			end
 			if amber then
 				level = (math.noise(t * 9, info.Seed) > -0.1) and 0.9 or 0.15
@@ -287,7 +288,7 @@ RunService.Heartbeat:Connect(function(dt)
 				fixture.Color = AMBER
 			else
 				info.Light.Color = info.LightColor
-				fixture.Color = info.Color
+				fixture.Color = mode == "Escuro" and info.Color:Lerp(Color3.new(0, 0, 0), 0.65) or info.Color
 			end
 			info.Light.Brightness = info.Base * level
 			fixture.Transparency = level < 0.3 and 0.6 or 0

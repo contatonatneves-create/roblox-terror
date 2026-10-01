@@ -11,7 +11,7 @@ local sweepHandlers = {}
 local function get(player)
 	local d = data[player]
 	if not d then
-		d = { Mode = "Andar", Pushing = false, PushSpeed = Config.Move.PushOne, Hidden = false, LastSweep = -100, InRun = false, Alive = true }
+		d = { Mode = "Andar", Pushing = false, PushSpeed = Config.Move.PushOne, Hidden = false, Covered = false, LastSweep = -100, InRun = false, Alive = true, Effects = {} }
 		data[player] = d
 	end
 	return d
@@ -33,6 +33,8 @@ function State.ApplySpeed(player)
 		hum.WalkSpeed = 0
 	elseif d.Pushing then
 		hum.WalkSpeed = d.PushSpeed
+	elseif d.Covered then
+		hum.WalkSpeed = Config.Move.Careful
 	elseif d.Mode == "Correr" then
 		hum.WalkSpeed = Config.Move.Run
 	elseif d.Mode == "Cuidado" then
@@ -42,6 +44,45 @@ function State.ApplySpeed(player)
 	end
 	hum.UseJumpPower = false
 	hum.JumpHeight = (d.Pushing or d.Hidden or d.InRun) and 0 or 4
+end
+
+-- Olhos cobertos (Instrutor): anda devagar e o cliente escurece a tela
+function State.SetCovered(player, covered)
+	local d = get(player)
+	if d.Covered == covered then
+		return
+	end
+	d.Covered = covered
+	player:SetAttribute("OlhosCobertos", covered)
+	State.ApplySpeed(player)
+end
+
+function State.IsCovered(player)
+	local d = data[player]
+	return d ~= nil and d.Covered
+end
+
+-- Efeitos temporários vistos pelo cliente e pelo Ruído (ex.: Cego, PassosPesados do Falso Colega)
+function State.SetEffect(player, name, seconds)
+	local d = get(player)
+	local token = {}
+	d.Effects[name] = token
+	player:SetAttribute(name, true)
+	task.delay(seconds, function()
+		if d.Effects[name] == token then
+			d.Effects[name] = nil
+			player:SetAttribute(name, nil)
+		end
+	end)
+end
+
+function State.ClearEffects(player)
+	local d = get(player)
+	for name in pairs(d.Effects) do
+		player:SetAttribute(name, nil)
+	end
+	d.Effects = {}
+	State.SetCovered(player, false)
 end
 
 function State.SetPushing(player, pushing, speed)
@@ -66,6 +107,9 @@ function State.SetInRun(player, inRun)
 	d.InRun = inRun
 	d.Alive = inRun
 	d.Mode = "Andar"
+	if not inRun then
+		State.ClearEffects(player)
+	end
 	player:SetAttribute("NaFita", inRun)
 	player:SetAttribute("Vivo", inRun)
 	State.ApplySpeed(player)
@@ -75,6 +119,9 @@ function State.SetAlive(player, alive)
 	local d = get(player)
 	d.Alive = alive
 	player:SetAttribute("Vivo", alive)
+	if not alive then
+		State.ClearEffects(player)
+	end
 end
 
 function State.IsActive(player)
@@ -157,6 +204,51 @@ local function attachPart(tool, handle, name, size, offset, color, material)
 	w.Parent = p
 	p.Parent = tool
 	return p
+end
+
+State.NewTool = newTool
+State.HandlePart = handlePart
+State.AttachPart = attachPart
+
+local function hasAny(player, name)
+	local c = player.Character
+	return player.Backpack:FindFirstChild(name) ~= nil or (c ~= nil and c:FindFirstChild(name) ~= nil)
+end
+
+-- Entrega a ferramenta ao jogador e já equipa
+function State.Equip(player, tool)
+	tool.Parent = player.Backpack
+	local hum = humanoid(player)
+	if hum then
+		hum:EquipTool(tool)
+	end
+	return tool
+end
+
+-- Bandeja do serviço de quarto (Hóspede do 302)
+function State.GiveTray(player)
+	if hasAny(player, "Bandeja") then
+		State.Notify(player, "Você já está com uma bandeja.")
+		return
+	end
+	local tool = newTool("Bandeja", "Deixe na marca do carpete")
+	local handle = handlePart(tool, Vector3.new(2, 0.15, 1.4), Color3.fromRGB(170, 172, 168), Enum.Material.Metal)
+	local cloche = attachPart(tool, handle, "Cloche", Vector3.new(0.9, 1.2, 1.2), CFrame.new(0, 0.5, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(200, 200, 196), Enum.Material.Metal)
+	cloche.Shape = Enum.PartType.Cylinder
+	tool.GripPos = Vector3.new(0, 0, 0.4)
+	State.Equip(player, tool)
+end
+
+-- Fita isolante (Conserto)
+function State.GiveDuctTape(player)
+	if hasAny(player, "FitaIsolante") then
+		State.Notify(player, "Você já está com fita isolante.")
+		return
+	end
+	local tool = newTool("FitaIsolante", "Use no fio exposto")
+	local handle = handlePart(tool, Vector3.new(0.4, 0.9, 0.9), Color3.fromRGB(28, 28, 30), Enum.Material.Plastic)
+	handle.Shape = Enum.PartType.Cylinder
+	State.Equip(player, tool)
 end
 
 function State.GiveBroom(player)
@@ -275,6 +367,12 @@ function State.Init(r)
 		player:SetAttribute("Modo", mode)
 		State.ApplySpeed(player)
 	end)
+	remotes.CobrirOlhos.OnServerEvent:Connect(function(player, covered)
+		if typeof(covered) ~= "boolean" then
+			return
+		end
+		State.SetCovered(player, covered and State.IsActive(player))
+	end)
 	local function setup(player)
 		get(player)
 		player:SetAttribute("NaFita", false)
@@ -284,6 +382,8 @@ function State.Init(r)
 			local d = get(player)
 			d.Pushing = false
 			d.Hidden = false
+			d.Covered = false
+			player:SetAttribute("OlhosCobertos", false)
 			player:SetAttribute("Empurrando", false)
 			player:SetAttribute("Escondido", false)
 			character:WaitForChild("Humanoid")
